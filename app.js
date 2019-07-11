@@ -1,28 +1,31 @@
 //NPM Packages
 
-const http = require('http');
 const request = require("request-promise");
-var schedule = require('node-schedule');
-var pg = require('pg');
-const promise = require('promise');
 const moment = require('moment');
+const pg = require('pg');
 
 //Config File Load
 
-var config = require('./config');
+const config = require('./config');
 
 //Database Connection
 
-const {Pool, Client} = require('pg');
+const {Client} = pg;
 const connectionString = 'postgres://' + config.databaseUserName + ':' + config.databasePassword + '@'
     + config.databaseHost + '/' + config.databaseName;
 const client = new Client({connectionString: connectionString});
-client.connect();
+try {
+    client.connect();
+} catch (e) {
+    console.log("ERROR : Cannot connect to database.")
+}
 
 
+// Initiator Function
 async function init() {
     let insertQuery = '';
     const res = await client.query('SELECT * FROM location');
+
 
     for (let i = 0; i < res.rows.length; i++) {
         let a = res.rows[i].latitude;
@@ -30,23 +33,46 @@ async function init() {
 
         const apiUrl = 'https://api.darksky.net/forecast/' + config.darkSkyApiToken + '/' + a + ',' + b + '?units=si';
 
-        const body = await request({url: apiUrl, method: 'GET'});
-        const data = JSON.parse(body);
+        //API Request with Request package
+        const body = await request({url: apiUrl, method: 'GET', json: true});
+
 
         let location_name = res.rows[i].location_name;
-        let temperature = data.currently.temperature;
-        let windSpeed = data.currently.windSpeed;
-        let humidity = data.currently.humidity;
-        let uvIndex = data.currently.uvIndex;
-        let date = moment.unix(data.currently.time).format('YYYY-MM-DD HH:mm:ss');
-        insertQuery += 'INSERT INTO forecast_data (location_name,temperature,wind_speed,humidity,uv_index,date) VALUES ( \'' + location_name + '\',' + temperature + ',' + windSpeed + ',' + humidity + ',' + uvIndex + ',\'' + date + '\');';
-        console.log("Inserting to database: " + insertQuery)
+        let temperature = body.currently.temperature;
+        let windSpeed = body.currently.windSpeed;
+        let humidity = body.currently.humidity;
+        let uvIndex = body.currently.uvIndex;
+        let date = moment.unix(body.currently.time).format(config.timeFormat);
+
+        insertQuery += 'INSERT INTO forecast_data (location_name,temperature,wind_speed,humidity,uv_index,date)' +
+            ' VALUES ( \'' + location_name + '\',' + temperature + ',' + windSpeed + ',' + humidity + ',' + uvIndex +
+            ',\'' + date + '\');';
+
+        setTimeout(function () {
+            process.stdout.write(".");
+        }, 1300);
+
+        if (i === 0) {
+            console.log("Getting weather data from API for " + res.rows.length + " location(s).")
+        }
+        if (i === res.rows.length - 1) {
+            console.log("Inserting weather data to database...")
+        }
+
+
+    }
+    try {
+        await client.query(insertQuery);
+        await console.log("Insertion finished.");
+    } catch (e) {
+        console.log("ERROR : Cannot insert to database.");
+        console.log(e)
     }
 
-    const insertRes = await client.query(insertQuery);
-    //client.end();  //Terminate database connection
-    return res;
+    client.end();  //Terminate database connection
 }
 
-var interval = schedule.scheduleJob('*/1 * * * * *', init);
- // var interval = schedule.scheduleJob('00 * * * *', init);  //Execute the init function every 1 hour
+
+init();  //Initiate the program
+
+//schedule.scheduleJob('00 * * * *', init);  //Execute the init function every hour
