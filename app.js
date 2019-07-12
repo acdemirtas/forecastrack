@@ -38,25 +38,26 @@ async function init() {
 
 
         let location_name = res.rows[i].location_name;
-        let temperature = body.currently.temperature;
-        let windSpeed = body.currently.windSpeed;
-        let humidity = body.currently.humidity;
+        let temperature = body.currently.temperature + ' °C';
+        let windSpeed = body.currently.windSpeed + ' m/s';
+        let humidity = Math.round(body.currently.humidity * 100) + ' %';
         let uvIndex = body.currently.uvIndex;
         let date = moment.unix(body.currently.time).format(config.timeFormat);
+        let summary = body.currently.summary;
 
-        insertQuery += 'INSERT INTO forecast_data (location_name,temperature,wind_speed,humidity,uv_index,date)' +
-            ' VALUES ( \'' + location_name + '\',' + temperature + ',' + windSpeed + ',' + humidity + ',' + uvIndex +
-            ',\'' + date + '\');';
+        insertQuery += 'INSERT INTO forecast_data (location_name,temperature,wind_speed,humidity,uv_index,date,summary)' +
+            ' VALUES ( \'' + location_name + '\',\'' + temperature + '\',\'' + windSpeed + '\',\'' + humidity + '\',' + uvIndex +
+            ',\'' + date + '\',\'' + summary + '\');';
 
-        setTimeout(function () {
+        setTimeout(function () {     //Show dots on console to represent loading
             process.stdout.write(".");
-        }, 1300);
+        }, 2000);
 
         if (i === 0) {
             console.log("Getting weather data from API for " + res.rows.length + " location(s).")
         }
         if (i === res.rows.length - 1) {
-            console.log("Inserting weather data to database...")
+            console.log("Inserting weather data to database")
         }
 
 
@@ -75,4 +76,6 @@ async function init() {
 
 init();  //Initiate the program
 
-//schedule.scheduleJob('00 * * * *', init);  //Execute the init function every hour
+
+//Execute the init function every hour to track data on a regular basis. "node-schedule" package is necessary.
+//schedule.scheduleJob('00 * * * *', init);
