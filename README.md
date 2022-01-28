@@ -1,4 +1,4 @@
-# Automatic Weather Forecast Tracking
+# Forecastrack - Automatic Weather Forecast Tracking
 
 ### Features
 - Automatically insert detailed weather forecast data into PostgreSQL database
