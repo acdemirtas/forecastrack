@@ -5,4 +5,4 @@
 - Option to gather data at specific time intervals
 - Works with any city in the world
 - Simple code
-- Seperate config.js file for Dark Sky API and PostgreSQL
+- Seperate config.js file for Dark Sky API and PostgreSQL configurations
